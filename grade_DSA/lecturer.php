@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
                     <tr>
                         <th>Project ID</th>
                         <th>Title</th>
-                        <th>Description</th>
+                        <th>Student</th>
                         <th>Graded</th>
                         <th>Score</th>
                         <th>Action</th>
@@ -108,11 +108,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
                         
                         <h5>Rubric Scoring (Score out of 10 each)</h5>
                         <div class="mb-3">
-                            <label class="form-label">Problem Identification and Niche Served</label>
+                            <label class="form-label"><strong> Problem Identification and Niche Served</strong> <br>
+                            The problem or
+                            niche identified is highly relevant, well-defined, andaddresses asignificant need.
+                            The project&#39;s focus is clear and coherent.</label>
                             <input type="number" class="form-control" id="problemIdentification" name="problem_identification" min="0" max="10" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Data Structure Implementation</label>
+                            <label class="form-label"> <strong> Data Structure Implementation</strong> <br>
+                            The application implements two distinct data structures, with a high degree of  
+                            proficiency. The implementations are efficient, well-designed, and demonstrate 
+                            a deep understanding of the data structures </label>
                             <input type="number" class="form-control" id="dataStructure" name="data_structure" min="0" max="10" required>
                         </div>
                         <div class="mb-3">
