@@ -65,12 +65,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         <section class="mt-5">
             <h2>Grade Projects</h2>
             
-            <table class="table table-bordered">
+            <table  class="table table-bordered">
                 <thead>
                     <tr>
                         <th>Project ID</th>
-                        <th>Title</th>
-                        <th>Description</th>
+                        <th>Project Title</th>
+                        <th>Student Name</th>
                         <th>Graded</th>
                         <th>Score</th>
                         <th>Action</th>
