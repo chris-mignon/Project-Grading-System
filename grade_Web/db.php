@@ -1,8 +1,8 @@
 <?php
 $host = 'localhost';
-$db = 'u641204627_moodle';
-$user = 'u641204627_mignon121';
-$pass = 'DSP@2007dsp';
+$db = '';
+$user = '';
+$pass = '';
 $charset = 'utf8mb4';
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
