@@ -27,6 +27,10 @@ SET time_zone = "+00:00";
 -- Table structure for table `grades`
 --
 
+-- create database grading_system;
+
+use grading_system; 
+
 CREATE TABLE `grades` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
