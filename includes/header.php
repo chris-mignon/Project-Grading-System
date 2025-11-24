@@ -4,7 +4,7 @@ require_once "auth.php";
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container">
-        <a class="navbar-brand" href="http://projectevaluationsystem-env.eba-8seiyy78.us-east-2.elasticbeanstalk.com/dashboard.php">
+        <a class="navbar-brand" href="https://project-grading-system.onrender.com/dashboard.php">
             <i class="bi bi-clipboard-check"></i> Project Evaluation System
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -13,7 +13,7 @@ require_once "auth.php";
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav me-auto">
                 <li class="nav-item">
-                    <a class="nav-link" href="http://projectevaluationsystem-env.eba-8seiyy78.us-east-2.elasticbeanstalk.com/dashboard.php">
+                    <a class="nav-link" href="https://project-grading-system.onrender.com//dashboard.php">
                         <i class="bi bi-speedometer2"></i> Dashboard
                     </a>
                 </li>
@@ -23,11 +23,11 @@ require_once "auth.php";
                             <i class="bi bi-gear"></i> Admin
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="http://projectevaluationsystem-env.eba-8seiyy78.us-east-2.elasticbeanstalk.com/admin/users.php">Users</a></li>
-                            <li><a class="dropdown-item" href="http://projectevaluationsystem-env.eba-8seiyy78.us-east-2.elasticbeanstalk.com/admin/courses.php">Courses</a></li>
-                            <li><a class="dropdown-item" href="http://projectevaluationsystem-env.eba-8seiyy78.us-east-2.elasticbeanstalk.com/admin/projects.php">Projects</a></li>
-                            <li><a class="dropdown-item" href="http://projectevaluationsystem-env.eba-8seiyy78.us-east-2.elasticbeanstalk.com/admin/rubric.php">Rubric</a></li>
-                            <li><a class="dropdown-item" href="http://projectevaluationsystem-env.eba-8seiyy78.us-east-2.elasticbeanstalk.com/admin/grades.php">View Grades</a></li>
+                            <li><a class="dropdown-item" href="https://project-grading-system.onrender.com/admin/users.php">Users</a></li>
+                            <li><a class="dropdown-item" href="https://project-grading-system.onrender.com/admin/courses.php">Courses</a></li>
+                            <li><a class="dropdown-item" href="https://project-grading-system.onrender.com/admin/projects.php">Projects</a></li>
+                            <li><a class="dropdown-item" href="https://project-grading-system.onrender.com/admin/rubric.php">Rubric</a></li>
+                            <li><a class="dropdown-item" href="https://project-grading-system.onrender.com/admin/grades.php">View Grades</a></li>
                         </ul>
                     </li>
                 <?php else: ?>
