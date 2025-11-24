@@ -1,0 +1,170 @@
+:root {
+    --primary-color: #3498db;
+    --secondary-color: #2c3e50;
+    --success-color: #27ae60;
+    --warning-color: #f39c12;
+    --danger-color: #e74c3c;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+    line-height: 1.6;
+}
+
+.login-body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+}
+
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.25rem;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: var(--secondary-color);
+    background-color: #f8f9fa;
+}
+
+.btn {
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+.alert {
+    border: none;
+    border-radius: 8px;
+}
+
+.badge {
+    font-size: 0.75em;
+    font-weight: 500;
+}
+
+.display-4 {
+    font-size: 2.5rem;
+}
+
+/* Evaluation form styles */
+.criteria-item {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: #f8f9fa;
+    transition: background-color 0.3s;
+}
+
+.criteria-item:hover {
+    background-color: #e9ecef;
+}
+
+.score-input {
+    max-width: 100px;
+    text-align: center;
+    font-weight: 600;
+}
+
+/* Results table */
+.results-table th {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* Toast notifications */
+.toast {
+    border-radius: 8px;
+}
+
+/* Loading animations */
+.spinner-border {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Modal enhancements */
+.modal-header {
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 10px 10px 0 0;
+}
+
+.modal-header .btn-close {
+    filter: invert(1);
+}
+
+/* Card hover effects */
+.card.bg-primary, 
+.card.bg-success, 
+.card.bg-warning, 
+.card.bg-info,
+.card.bg-secondary {
+    transition: transform 0.3s;
+}
+
+.card.bg-primary:hover, 
+.card.bg-success:hover, 
+.card.bg-warning:hover, 
+.card.bg-info:hover,
+.card.bg-secondary:hover {
+    transform: translateY(-5px);
+}
+
+/* Form enhancements */
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .sidebar {
+        min-height: auto;
+    }
+    
+    .display-4 {
+        font-size: 1.8rem;
+    }
+    
+    .card .row {
+        margin-bottom: 1rem;
+    }
+    
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    .navbar, .btn, .modal, .toast-container {
+        display: none !important;
+    }
+    
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #dee2e6 !important;
+    }
+}
