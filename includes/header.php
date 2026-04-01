@@ -13,7 +13,7 @@ require_once "auth.php";
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav me-auto">
                 <li class="nav-item">
-                    <a class="nav-link" href="https://project-grading-system.onrender.com//dashboard.php">
+                    <a class="nav-link" href="https://project-grading-system.onrender.com/dashboard.php">
                         <i class="bi bi-speedometer2"></i> Dashboard
                     </a>
                 </li>
