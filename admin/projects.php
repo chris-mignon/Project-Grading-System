@@ -33,7 +33,7 @@ $courses_stmt->execute();
 $courses = $courses_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Fetch lecturers for assignment
-$lecturers_stmt = $db->prepare("SELECT id, name FROM users WHERE role = 'lecturer' ORDER BY name ASC");
+$lecturers_stmt = $db->prepare("SELECT id, username AS name FROM users WHERE role = 'lecturer' ORDER BY username ASC");
 $lecturers_stmt->execute();
 $lecturers = $lecturers_stmt->fetchAll(PDO::FETCH_ASSOC);
 
