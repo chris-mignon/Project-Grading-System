@@ -42,17 +42,25 @@ if ($status === 'evaluated') {
 $where_sql = $where ? "WHERE " . implode(" AND ", $where) : "";
 
 // Main query
-$query = "SELECT p.*, c.course_name, 
-          (SELECT COUNT(*) FROM evaluations e WHERE e.project_id = p.id AND e.lecturer_id = ?) as evaluated,
-          (SELECT total_score FROM evaluations e WHERE e.project_id = p.id AND e.lecturer_id = ?) as my_score
-          FROM projects p 
-          JOIN courses c ON p.course_id = c.id 
+$query = "SELECT p.id, p.project_name, p.description, p.student_name, p.student_id, p.created_at,
+                 c.course_name,
+                 e.id AS evaluation_id,
+                 e.total_score AS my_score
+          FROM projects p
+          JOIN courses c ON p.course_id = c.id
+          LEFT JOIN evaluations e
+            ON e.project_id = p.id AND e.lecturer_id = ?
           $where_sql
           ORDER BY p.created_at DESC
           LIMIT $limit OFFSET $offset";
 
 $stmt = $db->prepare($query);
-$stmt->execute($params);
+// first param for JOIN lecturer_id, then rest filters (skip duplicated first two params usage)
+$execParams = [$_SESSION['user_id']];
+// rebuild params for filters (exclude the initial two used previously)
+$filterParams = array_slice($params, 2);
+$execParams = array_merge($execParams, $filterParams);
+$stmt->execute($execParams);
 $projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Count
@@ -69,10 +77,10 @@ $total_pages = ceil($total / $limit);
 <div id="projects-container" class="row">
 <?php foreach ($projects as $project): ?>
     <div class="col-md-6 col-lg-4 mb-4">
-        <div class="card h-100 <?php echo $project['evaluated'] ? 'border-success' : ''; ?>">
+        <div class="card h-100 <?php echo $project['evaluation_id'] ? 'border-success' : ''; ?>">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><?php echo htmlspecialchars($project['project_name']); ?></h5>
-                <?php if ($project['evaluated']): ?>
+                <?php if ($project['evaluation_id']): ?>
                     <span class="badge bg-success">Evaluated</span>
                 <?php else: ?>
                     <span class="badge bg-warning">Pending</span>
@@ -84,14 +92,14 @@ $total_pages = ceil($total / $limit);
                     <li class="list-group-item"><strong>Course:</strong> <?php echo htmlspecialchars($project['course_name']); ?></li>
                     <li class="list-group-item"><strong>Student:</strong> <?php echo htmlspecialchars($project['student_name']); ?></li>
                     <li class="list-group-item"><strong>Student ID:</strong> <?php echo htmlspecialchars($project['student_id']); ?></li>
-                    <?php if ($project['evaluated']): ?>
+                    <?php if ($project['evaluation_id']): ?>
                         <li class="list-group-item"><strong>Your Score:</strong> <?php echo $project['my_score']; ?></li>
                     <?php endif; ?>
                 </ul>
             </div>
             <div class="card-footer">
                 <button class="btn btn-primary w-100 evaluate-btn" data-project-id="<?php echo $project['id']; ?>">
-                    <?php echo $project['evaluated'] ? 'Update Evaluation' : 'Evaluate Project'; ?>
+                    <?php echo $project['evaluation_id'] ? 'Update Evaluation' : 'Evaluate Project'; ?>
                 </button>
             </div>
         </div>
