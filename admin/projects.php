@@ -41,11 +41,14 @@ $lecturers = $lecturers_stmt->fetchAll(PDO::FETCH_ASSOC);
 $projects_query = "SELECT p.*, c.course_name, c.course_code,
                   CASE WHEN p.assigned_to_all = 1 THEN 'All Lecturers'
                        ELSE GROUP_CONCAT(u.name SEPARATOR ', ')
-                  END AS assigned_lecturers
+                  END AS assigned_lecturers,
+                  COUNT(DISTINCT pa.lecturer_id) AS total_assigned,
+                  COUNT(DISTINCT e.lecturer_id) AS completed
                   FROM projects p 
                   JOIN courses c ON p.course_id = c.id
                   LEFT JOIN project_assignments pa ON pa.project_id = p.id
-                  LEFT JOIN users u ON u.id = pa.lecturer_id";
+                  LEFT JOIN users u ON u.id = pa.lecturer_id
+                  LEFT JOIN evaluations e ON e.project_id = p.id";
 if ($course_id) {
     $projects_query .= " WHERE p.course_id = ?";
 }
@@ -132,6 +135,7 @@ $projects = $projects_stmt->fetchAll(PDO::FETCH_ASSOC);
                                             <th>Course</th>
                                             <th>Description</th>
                                             <th>Assigned To</th>
+                                            <th>Progress</th>
                                             <th>Created</th>
                                             <th>Actions</th>
                                         </tr>
@@ -154,6 +158,24 @@ $projects = $projects_stmt->fetchAll(PDO::FETCH_ASSOC);
                                                             echo '<span class="text-muted">None</span>';
                                                         }
                                                     ?>
+                                                </td>
+                                                <td>
+                                                    <?php
+                                                        // total lecturers if assigned to all
+                                                        if ($project['assigned_to_all']) {
+                                                            $totalStmt = $db->query("SELECT COUNT(*) as cnt FROM users WHERE role='lecturer'");
+                                                            $total = $totalStmt->fetch(PDO::FETCH_ASSOC)['cnt'];
+                                                        } else {
+                                                            $total = $project['total_assigned'];
+                                                        }
+
+                                                        $done = $project['completed'] ?: 0;
+                                                        $percent = $total ? ($done / $total) * 100 : 0;
+                                                    ?>
+                                                    <div><?php echo "$done / $total"; ?></div>
+                                                    <div class="progress" style="height:6px;">
+                                                        <div class="progress-bar bg-success" style="width: <?php echo $percent; ?>%"></div>
+                                                    </div>
                                                 </td>
                                                 <td><?php echo date('M j, Y', strtotime($project['created_at'])); ?></td>
                                                 <td>
