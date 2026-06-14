@@ -8,17 +8,39 @@ $db = $database->getConnection();
 
 // Fetch projects with evaluation status for current lecturer
 $lecturer_id = $_SESSION['user_id'];
+
+// Summary stats (assigned scope respected)
+$statsQuery = "
+SELECT 
+    COUNT(DISTINCT p.id) as total,
+    COUNT(DISTINCT e.project_id) as evaluated
+FROM projects p
+LEFT JOIN project_assignments pa ON pa.project_id = p.id
+LEFT JOIN evaluations e ON e.project_id = p.id AND e.lecturer_id = ?
+WHERE (p.assigned_to_all = 1 OR pa.lecturer_id = ?)
+";
+$statsStmt = $db->prepare($statsQuery);
+$statsStmt->execute([$lecturer_id, $lecturer_id]);
+$stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
+
+$total = (int)($stats['total'] ?? 0);
+$evaluated = (int)($stats['evaluated'] ?? 0);
+$pending = max(0, $total - $evaluated);
+$percent = $total ? ($evaluated / $total) * 100 : 0;
+
 $query = "SELECT p.*, c.course_name, c.course_code, 
                  e.id as evaluation_id, e.total_score as my_score, e.feedback as my_feedback,
                  (SELECT COUNT(*) FROM evaluations WHERE project_id = p.id) as total_evaluations,
                  (SELECT AVG(total_score) FROM evaluations WHERE project_id = p.id) as avg_score
           FROM projects p 
           JOIN courses c ON p.course_id = c.id 
+          LEFT JOIN project_assignments pa ON pa.project_id = p.id
           LEFT JOIN evaluations e ON p.id = e.project_id AND e.lecturer_id = ?
+          WHERE (p.assigned_to_all = 1 OR pa.lecturer_id = ?)
           ORDER BY p.created_at DESC";
 
 $stmt = $db->prepare($query);
-$stmt->execute([$lecturer_id]);
+$stmt->execute([$lecturer_id, $lecturer_id]);
 $projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Count projects by evaluation status
@@ -55,28 +77,33 @@ foreach ($projects as $project) {
                 <!-- Evaluation Statistics -->
                 <div class="row mb-4">
                     <div class="col-md-4">
-                        <div class="card bg-primary text-white">
-                            <div class="card-body text-center">
-                                <h5>Total Projects</h5>
-                                <h3><?php echo count($projects); ?></h3>
-                            </div>
+                        <div class="card p-3 text-center">
+                            <h6 class="text-muted">Total Projects</h6>
+                            <h2><?php echo $total; ?></h2>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="card bg-success text-white">
-                            <div class="card-body text-center">
-                                <h5>Evaluated</h5>
-                                <h3><?php echo $evaluated_count; ?></h3>
-                            </div>
+                        <div class="card p-3 text-center">
+                            <h6 class="text-muted">Evaluated</h6>
+                            <h2 class="text-success"><?php echo $evaluated; ?></h2>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="card bg-warning text-white">
-                            <div class="card-body text-center">
-                                <h5>Pending</h5>
-                                <h3><?php echo $pending_count; ?></h3>
-                            </div>
+                        <div class="card p-3 text-center">
+                            <h6 class="text-muted">Pending</h6>
+                            <h2 class="text-warning"><?php echo $pending; ?></h2>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Overall Progress -->
+                <div class="card mb-4 p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>Overall Progress</strong>
+                        <small><?php echo round($percent); ?>%</small>
+                    </div>
+                    <div class="progress" style="height:10px;">
+                        <div class="progress-bar bg-success" style="width: <?php echo $percent; ?>%"></div>
                     </div>
                 </div>
                 
