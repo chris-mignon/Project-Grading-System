@@ -212,6 +212,7 @@ $total_pages = ceil($total / $limit);
                 <div class="modal-body">
                     <form id="evaluation-form">
                         <input type="hidden" id="project-id" name="project_id">
+                        <input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
                         <div id="criteria-container">
                             <!-- Criteria will be loaded via AJAX -->
                         </div>

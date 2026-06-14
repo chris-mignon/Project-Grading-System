@@ -39,7 +39,7 @@ if ($status === 'evaluated') {
     $params[] = $_SESSION['user_id'];
 }
 
-$where_sql = $where ? "WHERE " . implode(" AND ", $where) : "";
+$where_sql = $where ? " AND " . implode(" AND ", $where) : "";
 
 // Main query
 $query = "SELECT p.id, p.project_name, p.description, p.student_name, p.student_id, p.created_at,
@@ -48,16 +48,16 @@ $query = "SELECT p.id, p.project_name, p.description, p.student_name, p.student_
                  e.total_score AS my_score
           FROM projects p
           JOIN courses c ON p.course_id = c.id
-          LEFT JOIN evaluations e
-            ON e.project_id = p.id AND e.lecturer_id = ?
+          LEFT JOIN project_assignments pa ON pa.project_id = p.id
+          LEFT JOIN evaluations e ON e.project_id = p.id AND e.lecturer_id = ?
+          WHERE (p.assigned_to_all = 1 OR pa.lecturer_id = ?)
           $where_sql
           ORDER BY p.created_at DESC
           LIMIT $limit OFFSET $offset";
 
 $stmt = $db->prepare($query);
 // first param for JOIN lecturer_id, then rest filters (skip duplicated first two params usage)
-$execParams = [$_SESSION['user_id']];
-// rebuild params for filters (exclude the initial two used previously)
+$execParams = [$_SESSION['user_id'], $_SESSION['user_id']];
 $filterParams = array_slice($params, 2);
 $execParams = array_merge($execParams, $filterParams);
 $stmt->execute($execParams);

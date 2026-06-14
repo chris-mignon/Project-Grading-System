@@ -2,6 +2,13 @@
 require_once "../config/database.php";
 require_once "../includes/auth.php";
 
+// CSRF check
+if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+    echo json_encode(['success' => false, 'message' => 'Invalid CSRF token']);
+    exit;
+}
+require_once "../includes/auth.php";
+
 if (!isLoggedIn() || !isLecturer()) {
     http_response_code(403);
     header('Content-Type: application/json');
