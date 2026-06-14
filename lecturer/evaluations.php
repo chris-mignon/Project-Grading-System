@@ -78,6 +78,7 @@ $total_pages = ceil($total / $limit);
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <link href="../assets/css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 </head>
 <body>
     <?php include "../includes/header.php"; ?>
@@ -237,10 +238,13 @@ $total_pages = ceil($total / $limit);
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="../assets/js/script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
     // AJAX filtering + pagination
     function loadProjects(page = 1) {
         const formData = $('#filter-form').serialize() + '&page=' + page;
+
+        $('#projects-container').html('<div class="text-center py-5">Loading...</div>');
 
         $.get('../ajax/get_projects_paginated.php', formData, function(response) {
             const html = $('<div>').html(response);
@@ -250,8 +254,14 @@ $total_pages = ceil($total / $limit);
     }
 
     // Submit filter form
-    $('#filter-form').on('submit', function(e) {
-        e.preventDefault();
+    // auto filter
+    let timeout;
+    $('#filter-form input[name="search"]').on('keyup', function() {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => loadProjects(1), 400);
+    });
+
+    $('#filter-form select').on('change', function() {
         loadProjects(1);
     });
 

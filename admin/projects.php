@@ -69,6 +69,7 @@ $projects = $projects_stmt->fetchAll(PDO::FETCH_ASSOC);
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <link href="../assets/css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 </head>
 <body>
     <?php include "../includes/header.php"; ?>
@@ -160,6 +161,16 @@ $projects = $projects_stmt->fetchAll(PDO::FETCH_ASSOC);
                                                        class="btn btn-sm btn-outline-info">
                                                         <i class="bi bi-clipboard-check"></i> Rubric
                                                     </a>
+                                                    <button class="btn btn-sm btn-outline-primary edit-btn"
+                                                        data-id="<?php echo $project['id']; ?>"
+                                                        data-name="<?php echo htmlspecialchars($project['project_name']); ?>"
+                                                        data-student="<?php echo htmlspecialchars($project['student_name']); ?>"
+                                                        data-student-id="<?php echo htmlspecialchars($project['student_id']); ?>"
+                                                        data-description="<?php echo htmlspecialchars($project['description']); ?>"
+                                                        data-course="<?php echo $project['course_id']; ?>"
+                                                        data-bs-toggle="modal" data-bs-target="#editModal">
+                                                        Edit
+                                                    </button>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -180,7 +191,49 @@ $projects = $projects_stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </div>
     </div>
-    
+
+    <!-- Edit Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5>Edit Project</h5>
+                    <button class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="edit-form">
+                    <div class="modal-body">
+                        <input type="hidden" name="id" id="edit-id">
+                        <input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
+
+                        <input class="form-control mb-2" name="project_name" id="edit-name" required>
+                        <input class="form-control mb-2" name="student_name" id="edit-student" required>
+                        <input class="form-control mb-2" name="student_id" id="edit-student-id" required>
+                        <textarea class="form-control mb-2" name="description" id="edit-description"></textarea>
+
+                        <select class="form-select mb-2" name="course_id" id="edit-course">
+                            <?php foreach ($courses as $course): ?>
+                                <option value="<?php echo $course['id']; ?>"><?php echo htmlspecialchars($course['course_name']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+
+                        <div class="form-check mb-2">
+                            <input type="checkbox" name="assigned_to_all" id="edit-assign-all" class="form-check-input">
+                            <label class="form-check-label">Assign to all lecturers</label>
+                        </div>
+
+                        <select class="form-select" name="lecturers[]" id="edit-lecturers" multiple>
+                            <?php foreach ($lecturers as $lec): ?>
+                                <option value="<?php echo $lec['id']; ?>"><?php echo htmlspecialchars($lec['name']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" type="submit">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
     <!-- Add Project Modal -->
     <div class="modal fade" id="addProjectModal" tabindex="-1">
         <div class="modal-dialog">
@@ -251,6 +304,72 @@ $projects = $projects_stmt->fetchAll(PDO::FETCH_ASSOC);
     <?php include "../includes/footer.php"; ?>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+    // init select2
+    $(document).ready(function() {
+        $('#lecturers_select, #edit-lecturers').select2({
+            placeholder: 'Select lecturers',
+            width: '100%'
+        });
+    });
+    // populate edit modal
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.getElementById('edit-id').value = btn.dataset.id;
+            document.getElementById('edit-name').value = btn.dataset.name;
+            document.getElementById('edit-student').value = btn.dataset.student;
+            document.getElementById('edit-student-id').value = btn.dataset.studentId;
+            document.getElementById('edit-description').value = btn.dataset.description;
+            document.getElementById('edit-course').value = btn.dataset.course;
+
+            // reset selections
+            const assignAll = document.getElementById('edit-assign-all');
+            const lecturersSelect = document.getElementById('edit-lecturers');
+            assignAll.checked = false;
+            [...lecturersSelect.options].forEach(o => o.selected = false);
+
+            // fetch current assignments
+            fetch('../ajax/get_project_assignments.php?id=' + btn.dataset.id)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) return;
+
+                    assignAll.checked = data.assigned_to_all == 1;
+                    lecturersSelect.disabled = assignAll.checked;
+
+                    if (!assignAll.checked) {
+                        data.lecturers.forEach(id => {
+                            const opt = lecturersSelect.querySelector('option[value="' + id + '"]');
+                            if (opt) opt.selected = true;
+                        });
+                    }
+                });
+        });
+    });
+
+    // submit edit
+    document.getElementById('edit-form').addEventListener('submit', function(e){
+        e.preventDefault();
+        const formData = new FormData(this);
+
+        fetch('../ajax/update_project.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) location.reload();
+            else alert(data.message || 'Error');
+        });
+    });
+
+    // toggle disable in edit modal
+    document.getElementById('edit-assign-all').addEventListener('change', function() {
+        document.getElementById('edit-lecturers').disabled = this.checked;
+    });
+    </script>
     <script>
     // Disable lecturer select if assign all is checked
     document.getElementById('assign_all').addEventListener('change', function() {
