@@ -6,16 +6,67 @@ require_once "../config/database.php";
 $database = new Database();
 $db = $database->getConnection();
 
-// Fetch projects with evaluation status
+// Fetch courses for dropdown
+$coursesStmt = $db->prepare("SELECT id, course_name FROM courses ORDER BY course_name ASC");
+$coursesStmt->execute();
+$courses = $coursesStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Pagination
+$limit = 6;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($page < 1) $page = 1;
+$offset = ($page - 1) * $limit;
+
+// Filters
+$course_id = $_GET['course_id'] ?? '';
+$status = $_GET['status'] ?? '';
+$search = $_GET['search'] ?? '';
+
+$where = [];
+$params = [$_SESSION['user_id'], $_SESSION['user_id']];
+
+if ($course_id !== '') {
+    $where[] = "p.course_id = ?";
+    $params[] = $course_id;
+}
+
+if ($search !== '') {
+    $where[] = "(p.project_name LIKE ? OR p.student_name LIKE ?)";
+    $params[] = "%$search%";
+    $params[] = "%$search%";
+}
+
+if ($status === 'evaluated') {
+    $where[] = "EXISTS (SELECT 1 FROM evaluations e WHERE e.project_id = p.id AND e.lecturer_id = ?)";
+    $params[] = $_SESSION['user_id'];
+} elseif ($status === 'pending') {
+    $where[] = "NOT EXISTS (SELECT 1 FROM evaluations e WHERE e.project_id = p.id AND e.lecturer_id = ?)";
+    $params[] = $_SESSION['user_id'];
+}
+
+$where_sql = $where ? "WHERE " . implode(" AND ", $where) : "";
+
+// Main query with pagination
 $query = "SELECT p.*, c.course_name, 
           (SELECT COUNT(*) FROM evaluations e WHERE e.project_id = p.id AND e.lecturer_id = ?) as evaluated,
           (SELECT total_score FROM evaluations e WHERE e.project_id = p.id AND e.lecturer_id = ?) as my_score
           FROM projects p 
           JOIN courses c ON p.course_id = c.id 
-          ORDER BY p.created_at DESC";
+          $where_sql
+          ORDER BY p.created_at DESC
+          LIMIT $limit OFFSET $offset";
+
 $stmt = $db->prepare($query);
-$stmt->execute([$_SESSION['user_id'], $_SESSION['user_id']]);
+$stmt->execute($params);
 $projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Count total for pagination
+$countQuery = "SELECT COUNT(*) as total FROM projects p $where_sql";
+$countStmt = $db->prepare($countQuery);
+$countParams = array_slice($params, 2);
+$countStmt->execute($countParams);
+$total = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
+$total_pages = ceil($total / $limit);
 ?>
 
 <!DOCTYPE html>
@@ -36,7 +87,38 @@ $projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <div class="col-12">
                 <h2 class="mb-4">Evaluate Projects</h2>
                 
-                <div class="row">
+                <!-- Filters -->
+                <form id="filter-form" class="row mb-4">
+                    <div class="col-md-3">
+                        <input type="text" name="search" class="form-control" placeholder="Search..."
+                               value="<?php echo htmlspecialchars($search); ?>">
+                    </div>
+
+                    <div class="col-md-3">
+                        <select name="status" class="form-select">
+                            <option value="">All Status</option>
+                            <option value="evaluated" <?php if ($status=="evaluated") echo "selected"; ?>>Evaluated</option>
+                            <option value="pending" <?php if ($status=="pending") echo "selected"; ?>>Pending</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <select name="course_id" class="form-select">
+                            <option value="">All Courses</option>
+                            <?php foreach ($courses as $course): ?>
+                                <option value="<?php echo $course['id']; ?>" <?php if ($course_id == $course['id']) echo 'selected'; ?>>
+                                    <?php echo htmlspecialchars($course['course_name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary w-100">Filter</button>
+                    </div>
+                </form>
+
+                <div id="projects-container" class="row">
                     <?php foreach ($projects as $project): ?>
                         <div class="col-md-6 col-lg-4 mb-4">
                             <div class="card h-100 <?php echo $project['evaluated'] ? 'border-success' : ''; ?>">
@@ -90,6 +172,31 @@ $projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </div>
                     <?php endif; ?>
                 </div>
+
+                <!-- Pagination -->
+                <div id="pagination-container">
+                    <nav>
+                        <ul class="pagination justify-content-center">
+                            <?php if ($page > 1): ?>
+                                <li class="page-item">
+                                    <a class="page-link" href="#" data-page="<?php echo $page-1; ?>">Previous</a>
+                                </li>
+                            <?php endif; ?>
+
+                            <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                                <li class="page-item <?php if ($i == $page) echo 'active'; ?>">
+                                    <a class="page-link" href="#" data-page="<?php echo $i; ?>"><?php echo $i; ?></a>
+                                </li>
+                            <?php endfor; ?>
+
+                            <?php if ($page < $total_pages): ?>
+                                <li class="page-item">
+                                    <a class="page-link" href="#" data-page="<?php echo $page+1; ?>">Next</a>
+                                </li>
+                            <?php endif; ?>
+                        </ul>
+                    </nav>
+                </div>
             </div>
         </div>
     </div>
@@ -129,5 +236,30 @@ $projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="../assets/js/script.js"></script>
+    <script>
+    // AJAX filtering + pagination
+    function loadProjects(page = 1) {
+        const formData = $('#filter-form').serialize() + '&page=' + page;
+
+        $.get('../ajax/get_projects_paginated.php', formData, function(response) {
+            const html = $('<div>').html(response);
+            $('#projects-container').replaceWith(html.find('#projects-container'));
+            $('#pagination-container').replaceWith(html.find('#pagination-container'));
+        });
+    }
+
+    // Submit filter form
+    $('#filter-form').on('submit', function(e) {
+        e.preventDefault();
+        loadProjects(1);
+    });
+
+    // Handle pagination clicks
+    $(document).on('click', '.page-link', function(e) {
+        e.preventDefault();
+        const page = $(this).data('page');
+        if (page) loadProjects(page);
+    });
+    </script>
 </body>
 </html>
