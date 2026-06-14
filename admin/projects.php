@@ -32,14 +32,24 @@ $courses_stmt = $db->prepare($courses_query);
 $courses_stmt->execute();
 $courses = $courses_stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Fetch lecturers for assignment
+$lecturers_stmt = $db->prepare("SELECT id, name FROM users WHERE role = 'lecturer' ORDER BY name ASC");
+$lecturers_stmt->execute();
+$lecturers = $lecturers_stmt->fetchAll(PDO::FETCH_ASSOC);
+
 // Fetch projects
-$projects_query = "SELECT p.*, c.course_name, c.course_code 
+$projects_query = "SELECT p.*, c.course_name, c.course_code,
+                  CASE WHEN p.assigned_to_all = 1 THEN 'All Lecturers'
+                       ELSE GROUP_CONCAT(u.name SEPARATOR ', ')
+                  END AS assigned_lecturers
                   FROM projects p 
-                  JOIN courses c ON p.course_id = c.id";
+                  JOIN courses c ON p.course_id = c.id
+                  LEFT JOIN project_assignments pa ON pa.project_id = p.id
+                  LEFT JOIN users u ON u.id = pa.lecturer_id";
 if ($course_id) {
     $projects_query .= " WHERE p.course_id = ?";
 }
-$projects_query .= " ORDER BY p.created_at DESC";
+$projects_query .= " GROUP BY p.id ORDER BY p.created_at DESC";
 
 $projects_stmt = $db->prepare($projects_query);
 if ($course_id) {
@@ -120,6 +130,7 @@ $projects = $projects_stmt->fetchAll(PDO::FETCH_ASSOC);
                                             <th>Student ID</th>
                                             <th>Course</th>
                                             <th>Description</th>
+                                            <th>Assigned To</th>
                                             <th>Created</th>
                                             <th>Actions</th>
                                         </tr>
@@ -132,6 +143,17 @@ $projects = $projects_stmt->fetchAll(PDO::FETCH_ASSOC);
                                                 <td><?php echo htmlspecialchars($project['student_id']); ?></td>
                                                 <td><?php echo htmlspecialchars($project['course_code']); ?></td>
                                                 <td><?php echo htmlspecialchars($project['description']); ?></td>
+                                                <td>
+                                                    <?php
+                                                        if ($project['assigned_to_all']) {
+                                                            echo '<span class="badge bg-primary">All</span>';
+                                                        } elseif (!empty($project['assigned_lecturers'])) {
+                                                            echo htmlspecialchars($project['assigned_lecturers']);
+                                                        } else {
+                                                            echo '<span class="text-muted">None</span>';
+                                                        }
+                                                    ?>
+                                                </td>
                                                 <td><?php echo date('M j, Y', strtotime($project['created_at'])); ?></td>
                                                 <td>
                                                     <a href="rubric.php?course_id=<?php echo $project['course_id']; ?>" 
@@ -169,6 +191,7 @@ $projects = $projects_stmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
                 <form method="POST">
                     <div class="modal-body">
+                        <input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
                         <div class="mb-3">
                             <label for="course_id" class="form-label">Course</label>
                             <select class="form-select" id="course_id" name="course_id" required>
@@ -197,6 +220,24 @@ $projects = $projects_stmt->fetchAll(PDO::FETCH_ASSOC);
                             <label for="description" class="form-label">Description</label>
                             <textarea class="form-control" id="description" name="description" rows="3"></textarea>
                         </div>
+
+                        <!-- Assignment -->
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="assign_all" name="assigned_to_all">
+                            <label class="form-check-label" for="assign_all">Assign to all lecturers</label>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Assign specific lecturers</label>
+                            <select class="form-select" name="lecturers[]" id="lecturers_select" multiple>
+                                <?php foreach ($lecturers as $lec): ?>
+                                    <option value="<?php echo $lec['id']; ?>">
+                                        <?php echo htmlspecialchars($lec['name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <small class="text-muted">Hold Ctrl (Windows) or Cmd (Mac) to select multiple</small>
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -210,5 +251,11 @@ $projects = $projects_stmt->fetchAll(PDO::FETCH_ASSOC);
     <?php include "../includes/footer.php"; ?>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    // Disable lecturer select if assign all is checked
+    document.getElementById('assign_all').addEventListener('change', function() {
+        document.getElementById('lecturers_select').disabled = this.checked;
+    });
+    </script>
 </body>
 </html>
