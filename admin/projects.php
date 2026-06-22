@@ -71,9 +71,9 @@ $lecturers = $lecturers_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Fetch projects
 $projects_query = "SELECT p.*, c.course_name, c.course_code,
-                   CASE WHEN p.assigned_to_all = 1 THEN 'All Lecturers'
-                        ELSE GROUP_CONCAT(u.username SEPARATOR ', ')
-                   END AS assigned_lecturers,
+                  CASE WHEN p.assigned_to_all = 1 THEN 'All Lecturers'
+                       ELSE GROUP_CONCAT(u.username SEPARATOR ', ')
+                  END AS assigned_lecturers,
                   COUNT(DISTINCT pa.lecturer_id) AS total_assigned,
                   COUNT(DISTINCT e.lecturer_id) AS completed
                   FROM projects p 

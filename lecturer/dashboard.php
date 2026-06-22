@@ -84,28 +84,33 @@ foreach ($projects as $project) {
                 <!-- Evaluation Statistics -->
                 <div class="row mb-4">
                     <div class="col-md-4">
-                        <div class="card bg-primary text-white">
-                            <div class="card-body text-center">
-                                <h5>Total Projects</h5>
-                                <h3><?php echo count($projects); ?></h3>
-                            </div>
+                        <div class="card p-3 text-center">
+                            <h6 class="text-muted">Total Projects</h6>
+                            <h2><?php echo $total; ?></h2>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="card bg-success text-white">
-                            <div class="card-body text-center">
-                                <h5>Evaluated</h5>
-                                <h3><?php echo $evaluated_count; ?></h3>
-                            </div>
+                        <div class="card p-3 text-center">
+                            <h6 class="text-muted">Evaluated</h6>
+                            <h2 class="text-success"><?php echo $evaluated; ?></h2>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="card bg-warning text-white">
-                            <div class="card-body text-center">
-                                <h5>Pending</h5>
-                                <h3><?php echo $pending_count; ?></h3>
-                            </div>
+                        <div class="card p-3 text-center">
+                            <h6 class="text-muted">Pending</h6>
+                            <h2 class="text-warning"><?php echo $pending; ?></h2>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Overall Progress -->
+                <div class="card mb-4 p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>Overall Progress</strong>
+                        <small><?php echo round($percent); ?>%</small>
+                    </div>
+                    <div class="progress" style="height:10px;">
+                        <div class="progress-bar bg-success" style="width: <?php echo $percent; ?>%"></div>
                     </div>
                 </div>
                 
