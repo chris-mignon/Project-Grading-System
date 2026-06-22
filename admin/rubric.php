@@ -1,6 +1,6 @@
 <?php
 require_once "../includes/auth.php";
-redirectIfNotAdmin();
+redirectIfNotAdminOrLecturer();
 
 require_once "../config/database.php";
 $database = new Database();
@@ -11,6 +11,11 @@ $course_id = $_GET['course_id'] ?? null;
 
 // Handle form submission
 if ($_POST && isset($_POST['criterion_name'])) {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $course_id = $_POST['course_id'] ?? ($_GET['course_id'] ?? '');
+        header("Location: rubric.php?success=0&course_id=" . $course_id);
+        exit();
+    }
     $criterion_name = $_POST['criterion_name'];
     $max_score = $_POST['max_score'];
     $course_id = $_POST['course_id'];
@@ -222,6 +227,7 @@ if ($course_id) {
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form method="POST">
+                    <input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
                     <div class="modal-body">
                         <div class="mb-3">
                             <label for="course_id" class="form-label">Course</label>

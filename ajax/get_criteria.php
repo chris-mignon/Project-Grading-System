@@ -17,6 +17,8 @@ $db = $database->getConnection();
 
 $project_id = $_POST['project_id'] ?? null;
 
+$lecturer_id = $_SESSION['user_id'];
+
 if (!$project_id) {
     exit('Invalid project ID');
 }
@@ -31,6 +33,16 @@ $project = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$project) {
     exit('Project not found');
+}
+
+// Authorization: lecturer can only access criteria for assigned projects
+if (isLecturer() && (int)($project['assigned_to_all'] ?? 0) === 0) {
+    $authStmt = $db->prepare("SELECT 1 FROM project_assignments WHERE project_id = ? AND lecturer_id = ? LIMIT 1");
+    $authStmt->execute([$project_id, $lecturer_id]);
+    if ($authStmt->rowCount() === 0) {
+        http_response_code(403);
+        exit('Unauthorized');
+    }
 }
 
 $course_id = $project['course_id'];

@@ -62,6 +62,19 @@ try {
         ]);
         exit();
     }
+
+    // Authorization: lecturer can only evaluate projects assigned to them (or all)
+    if ((int)($project['assigned_to_all'] ?? 0) === 0) {
+        $authQuery = "SELECT 1 FROM project_assignments WHERE project_id = ? AND lecturer_id = ?";
+        $authStmt = $db->prepare($authQuery);
+        $authStmt->execute([$project_id, $_SESSION['user_id']]);
+        if ($authStmt->rowCount() === 0) {
+            http_response_code(403);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Unauthorized access to this project']);
+            exit();
+        }
+    }
 } catch (Exception $e) {
     error_log("Database error in project validation: " . $e->getMessage());
     header('Content-Type: application/json');

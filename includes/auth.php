@@ -41,6 +41,14 @@ function redirectIfNotAdmin() {
     }
 }
 
+function redirectIfNotAdminOrLecturer() {
+    redirectIfNotLoggedIn();
+    if (!(isAdmin() || isLecturer())) {
+        header("Location: ../dashboard.php");
+        exit();
+    }
+}
+
 function redirectIfNotLecturer() {
     redirectIfNotLoggedIn();
     if (!isLecturer()) {

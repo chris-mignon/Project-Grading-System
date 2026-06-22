@@ -17,17 +17,21 @@ require_once "auth.php";
                         <i class="bi bi-speedometer2"></i> Dashboard
                     </a>
                 </li>
-                <?php if (isAdmin()): ?>
+                <?php if (isAdmin() || isLecturer()): ?>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                            <i class="bi bi-gear"></i> Admin
+                            <i class="bi bi-gear"></i> Manage
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="https://project-grading-system.onrender.com/admin/users.php">Users</a></li>
+                            <?php if (isAdmin()): ?>
+                                <li><a class="dropdown-item" href="https://project-grading-system.onrender.com/admin/users.php">Users</a></li>
+                            <?php endif; ?>
                             <li><a class="dropdown-item" href="https://project-grading-system.onrender.com/admin/courses.php">Courses</a></li>
                             <li><a class="dropdown-item" href="https://project-grading-system.onrender.com/admin/projects.php">Projects</a></li>
                             <li><a class="dropdown-item" href="https://project-grading-system.onrender.com/admin/rubric.php">Rubric</a></li>
-                            <li><a class="dropdown-item" href="https://project-grading-system.onrender.com/admin/grades.php">View Grades</a></li>
+                            <?php if (isAdmin()): ?>
+                                <li><a class="dropdown-item" href="https://project-grading-system.onrender.com/admin/grades.php">View Grades</a></li>
+                            <?php endif; ?>
                         </ul>
                     </li>
                 <?php else: ?>

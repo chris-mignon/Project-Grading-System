@@ -99,6 +99,7 @@ $(document).ready(function() {
             url: '../ajax/save_evaluation.php',
             method: 'POST',
             data: {
+                csrf_token: $('#evaluation-form input[name="csrf_token"]').val(),
                 project_id: projectId,
                 feedback: feedback,
                 scores: scores
@@ -181,10 +182,10 @@ if ($('#toast-container').length === 0) {
 }
 
 // Submit evaluation
-$('#submit-evaluation').click(function() {
-    const projectId = $('#project-id').val();
-    const feedback = $('#feedback').val();
-    const scores = {};
+    $('#submit-evaluation').click(function() {
+        const projectId = $('#project-id').val();
+        const feedback = $('#feedback').val();
+        const scores = {};
     
     // Validate at least one score is provided
     let hasScores = false;
@@ -216,15 +217,16 @@ $('#submit-evaluation').click(function() {
     submitBtn.html('<span class="spinner-border spinner-border-sm" role="status"></span> Saving...');
     submitBtn.prop('disabled', true);
     
-    $.ajax({
-        url: '../ajax/save_evaluation.php',
-        method: 'POST',
-        data: {
-            project_id: projectId,
-            feedback: feedback,
-            scores: scores
-        },
-        success: function(response) {
+        $.ajax({
+            url: '../ajax/save_evaluation.php',
+            method: 'POST',
+            data: {
+                csrf_token: $('#evaluation-form input[name="csrf_token"]').val(),
+                project_id: projectId,
+                feedback: feedback,
+                scores: scores
+            },
+            success: function(response) {
             if (response.success) {
                 $('#evaluationModal').modal('hide');
                 $('#successModal').modal('show');

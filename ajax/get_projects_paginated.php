@@ -14,8 +14,15 @@ $offset = ($page - 1) * $limit;
 
 // Filters
 $course_id = $_GET['course_id'] ?? '';
+$course_id = (is_string($course_id) && ctype_digit($course_id)) ? (int)$course_id : '';
+
 $status = $_GET['status'] ?? '';
-$search = $_GET['search'] ?? '';
+$status = in_array($status, ['evaluated', 'pending'], true) ? $status : '';
+
+$search = trim((string)($_GET['search'] ?? ''));
+if (mb_strlen($search) > 80) {
+    $search = mb_substr($search, 0, 80);
+}
 
 $where = [];
 $params = [$_SESSION['user_id'], $_SESSION['user_id']];
@@ -55,21 +62,26 @@ $query = "SELECT p.id, p.project_name, p.description, p.student_name, p.student_
           ORDER BY p.created_at DESC
           LIMIT $limit OFFSET $offset";
 
+$lecturer_id = $_SESSION['user_id'];
 $stmt = $db->prepare($query);
-// first param for JOIN lecturer_id, then rest filters (skip duplicated first two params usage)
-$execParams = [$_SESSION['user_id'], $_SESSION['user_id']];
+// first param for JOIN lecturer_id, then rest filters (skip the duplicated scope params)
 $filterParams = array_slice($params, 2);
+$execParams = [$lecturer_id, $lecturer_id];
 $execParams = array_merge($execParams, $filterParams);
 $stmt->execute($execParams);
 $projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Count
-$countQuery = "SELECT COUNT(*) as total FROM projects p $where_sql";
+$countQuery = "SELECT COUNT(DISTINCT p.id) as total
+               FROM projects p
+               LEFT JOIN project_assignments pa ON pa.project_id = p.id
+               WHERE (p.assigned_to_all = 1 OR pa.lecturer_id = ?)" . $where_sql;
 $countStmt = $db->prepare($countQuery);
-$countParams = array_slice($params, 2);
-$countStmt->execute($countParams);
-$total = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
+$countStmt->execute(array_merge([$lecturer_id], $filterParams));
+$total = (int)($countStmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0);
 $total_pages = ceil($total / $limit);
+$from = $total === 0 ? 0 : $offset + 1;
+$to = min($total, $offset + $limit);
 
 // Render partial HTML
 ?>
@@ -108,6 +120,13 @@ $total_pages = ceil($total / $limit);
 </div>
 
 <div id="pagination-container">
+    <div class="text-center text-muted mb-2">
+        <?php if ($total > 0): ?>
+            Showing <?php echo $from; ?>–<?php echo $to; ?> of <?php echo $total; ?>
+        <?php else: ?>
+            No projects found
+        <?php endif; ?>
+    </div>
     <nav>
         <ul class="pagination justify-content-center">
             <?php if ($page > 1): ?>

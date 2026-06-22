@@ -28,14 +28,21 @@ $evaluated = (int)($stats['evaluated'] ?? 0);
 $pending = max(0, $total - $evaluated);
 $percent = $total ? ($evaluated / $total) * 100 : 0;
 
-$query = "SELECT p.*, c.course_name, c.course_code, 
+$query = "SELECT p.*, c.course_name, c.course_code,
                  e.id as evaluation_id, e.total_score as my_score, e.feedback as my_feedback,
-                 (SELECT COUNT(*) FROM evaluations WHERE project_id = p.id) as total_evaluations,
-                 (SELECT AVG(total_score) FROM evaluations WHERE project_id = p.id) as avg_score
-          FROM projects p 
-          JOIN courses c ON p.course_id = c.id 
+                 evStats.total_evaluations,
+                 evStats.avg_score
+          FROM projects p
+          JOIN courses c ON p.course_id = c.id
           LEFT JOIN project_assignments pa ON pa.project_id = p.id
           LEFT JOIN evaluations e ON p.id = e.project_id AND e.lecturer_id = ?
+          LEFT JOIN (
+              SELECT project_id,
+                     COUNT(*) as total_evaluations,
+                     AVG(total_score) as avg_score
+              FROM evaluations
+              GROUP BY project_id
+          ) evStats ON evStats.project_id = p.id
           WHERE (p.assigned_to_all = 1 OR pa.lecturer_id = ?)
           ORDER BY p.created_at DESC";
 
@@ -230,6 +237,7 @@ foreach ($projects as $project) {
                     <!-- Evaluation Form -->
                     <form id="evaluation-form">
                         <input type="hidden" id="project-id" name="project_id">
+                        <input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
                         
                         <!-- Criteria Section -->
                         <div class="mb-4">
