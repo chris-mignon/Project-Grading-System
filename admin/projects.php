@@ -29,6 +29,17 @@ if ($_POST && isset($_POST['project_name'])) {
         exit();
     }
 
+    // Authorization: lecturer can only create projects for courses they created
+    if (isLecturer() && !isAdmin()) {
+        $auth = $db->prepare("SELECT created_by FROM courses WHERE id = ?");
+        $auth->execute([$course_id]);
+        $row = $auth->fetch(PDO::FETCH_ASSOC);
+        if (!$row || (int)$row['created_by'] !== (int)$_SESSION['user_id']) {
+            header("Location: projects.php?success=0&course_id=" . $course_id);
+            exit();
+        }
+    }
+
     try {
         $db->beginTransaction();
         $query = "INSERT INTO projects (project_name, description, student_name, student_id, course_id, assigned_to_all) 
@@ -72,7 +83,7 @@ $lecturers = $lecturers_stmt->fetchAll(PDO::FETCH_ASSOC);
 // Fetch projects
 $projects_query = "SELECT p.*, c.course_name, c.course_code,
                   CASE WHEN p.assigned_to_all = 1 THEN 'All Lecturers'
-                       ELSE GROUP_CONCAT(u.username SEPARATOR ', ')
+                        ELSE GROUP_CONCAT(u.username SEPARATOR ', ')
                   END AS assigned_lecturers,
                   COUNT(DISTINCT pa.lecturer_id) AS total_assigned,
                   COUNT(DISTINCT e.lecturer_id) AS completed
@@ -81,17 +92,27 @@ $projects_query = "SELECT p.*, c.course_name, c.course_code,
                   LEFT JOIN project_assignments pa ON pa.project_id = p.id
                   LEFT JOIN users u ON u.id = pa.lecturer_id
                   LEFT JOIN evaluations e ON e.project_id = p.id";
-if ($course_id) {
-    $projects_query .= " WHERE p.course_id = ?";
+
+$where = [];
+$params = [];
+if (isLecturer() && !isAdmin()) {
+    $where[] = "c.created_by = ?";
+    $params[] = $_SESSION['user_id'];
 }
+
+if ($course_id) {
+    $where[] = "p.course_id = ?";
+    $params[] = $course_id;
+}
+
+if ($where) {
+    $projects_query .= " WHERE " . implode(" AND ", $where);
+}
+
 $projects_query .= " GROUP BY p.id ORDER BY p.created_at DESC";
 
 $projects_stmt = $db->prepare($projects_query);
-if ($course_id) {
-    $projects_stmt->execute([$course_id]);
-} else {
-    $projects_stmt->execute();
-}
+$projects_stmt->execute($params);
 $projects = $projects_stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 

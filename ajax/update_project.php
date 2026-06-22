@@ -21,6 +21,8 @@ if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
 
 $db = (new Database())->getConnection();
 
+$userId = (int)$_SESSION['user_id'];
+
 $id = (int)($_POST['id'] ?? 0);
 $project_name = $_POST['project_name'] ?? '';
 $description = $_POST['description'] ?? '';
@@ -36,6 +38,39 @@ if (!$id || !$project_name || !$student_name || !$student_id || !$course_id) {
 }
 
 try {
+    // Authorization: lecturer can only edit projects for courses they created
+    if (!isAdmin()) {
+        $auth = $db->prepare(
+            "SELECT p.course_id, c.created_by
+             FROM projects p
+             JOIN courses c ON c.id = p.course_id
+             WHERE p.id = ?"
+        );
+        $auth->execute([$id]);
+        $row = $auth->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'Project not found']);
+            exit();
+        }
+
+        if ((int)$row['created_by'] !== $userId) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+            exit();
+        }
+
+        // If course_id changes, ensure new course is also owned
+        $newCourse = $db->prepare("SELECT created_by FROM courses WHERE id = ?");
+        $newCourse->execute([(int)$course_id]);
+        $nc = $newCourse->fetch(PDO::FETCH_ASSOC);
+        if (!$nc || (int)$nc['created_by'] !== $userId) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+            exit();
+        }
+    }
+
     $db->beginTransaction();
 
     $stmt = $db->prepare("UPDATE projects SET project_name=?, description=?, student_name=?, student_id=?, course_id=?, assigned_to_all=? WHERE id=?");

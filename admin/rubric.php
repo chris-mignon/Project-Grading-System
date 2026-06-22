@@ -19,6 +19,17 @@ if ($_POST && isset($_POST['criterion_name'])) {
     $criterion_name = $_POST['criterion_name'];
     $max_score = $_POST['max_score'];
     $course_id = $_POST['course_id'];
+
+    // Authorization: lecturer can only manage rubric for courses they created
+    if (isLecturer() && !isAdmin()) {
+        $auth = $db->prepare("SELECT created_by FROM courses WHERE id = ?");
+        $auth->execute([(int)$course_id]);
+        $row = $auth->fetch(PDO::FETCH_ASSOC);
+        if (!$row || (int)$row['created_by'] !== (int)$_SESSION['user_id']) {
+            header("Location: rubric.php?success=0&course_id=" . $course_id);
+            exit();
+        }
+    }
     
     $query = "INSERT INTO rubric_criteria (criterion_name, max_score, course_id) VALUES (?, ?, ?)";
     $stmt = $db->prepare($query);
@@ -31,35 +42,76 @@ if ($_POST && isset($_POST['criterion_name'])) {
 // Handle delete request
 if (isset($_GET['delete_id'])) {
     $delete_id = $_GET['delete_id'];
+
+    // Authorization: lecturer can only delete rubric for their courses
+    if (isLecturer() && !isAdmin()) {
+        $auth = $db->prepare(
+            "SELECT rc.course_id
+             FROM rubric_criteria rc
+             JOIN courses c ON c.id = rc.course_id
+             WHERE rc.id = ?"
+        );
+        // get created_by from joined course
+        $auth2 = $db->prepare(
+            "SELECT c.created_by
+             FROM rubric_criteria rc
+             JOIN courses c ON c.id = rc.course_id
+             WHERE rc.id = ?"
+        );
+        $auth2->execute([(int)$delete_id]);
+        $row = $auth2->fetch(PDO::FETCH_ASSOC);
+        if (!$row || (int)$row['created_by'] !== (int)$_SESSION['user_id']) {
+            header("Location: rubric.php?success=0&course_id=" . ($course_id ?? ''));
+            exit();
+        }
+    }
+
     $query = "DELETE FROM rubric_criteria WHERE id = ?";
     $stmt = $db->prepare($query);
-    $stmt->execute([$delete_id]);
+    $stmt->execute([(int)$delete_id]);
     
     header("Location: rubric.php?success=2&course_id=" . $course_id);
     exit();
 }
 
 // Fetch courses for dropdown
-$courses_query = "SELECT * FROM courses ORDER BY course_name";
+$courses_query = "SELECT * FROM courses";
+if (isLecturer() && !isAdmin()) {
+    $courses_query .= " WHERE created_by = ?";
+}
+$courses_query .= " ORDER BY course_name";
 $courses_stmt = $db->prepare($courses_query);
-$courses_stmt->execute();
+if (isLecturer() && !isAdmin()) {
+    $courses_stmt->execute([$_SESSION['user_id']]);
+} else {
+    $courses_stmt->execute();
+}
 $courses = $courses_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Fetch rubric criteria
-$criteria_query = "SELECT rc.*, c.course_name, c.course_code 
-                  FROM rubric_criteria rc 
+$criteria_query = "SELECT rc.*, c.course_name, c.course_code
+                  FROM rubric_criteria rc
                   JOIN courses c ON rc.course_id = c.id";
+
+$criteriaWhere = [];
+$criteriaParams = [];
 if ($course_id) {
-    $criteria_query .= " WHERE rc.course_id = ?";
+    $criteriaWhere[] = "rc.course_id = ?";
+    $criteriaParams[] = $course_id;
 }
+if (isLecturer() && !isAdmin()) {
+    $criteriaWhere[] = "c.created_by = ?";
+    $criteriaParams[] = $_SESSION['user_id'];
+}
+
+if ($criteriaWhere) {
+    $criteria_query .= " WHERE " . implode(" AND ", $criteriaWhere);
+}
+
 $criteria_query .= " ORDER BY rc.id";
 
 $criteria_stmt = $db->prepare($criteria_query);
-if ($course_id) {
-    $criteria_stmt->execute([$course_id]);
-} else {
-    $criteria_stmt->execute();
-}
+$criteria_stmt->execute($criteriaParams);
 $criteria = $criteria_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get selected course name

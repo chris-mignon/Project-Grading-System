@@ -36,6 +36,18 @@ if (empty($project_name) || empty($student_name) || empty($student_id) || empty(
     exit();
 }
 
+// Authorization: lecturer can only add projects to courses they created
+if (!isAdmin()) {
+    $auth = $db->prepare("SELECT created_by FROM courses WHERE id = ?");
+    $auth->execute([(int)$course_id]);
+    $row = $auth->fetch(PDO::FETCH_ASSOC);
+    if (!$row || (int)$row['created_by'] !== (int)$_SESSION['user_id']) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        exit();
+    }
+}
+
 try {
     $db->beginTransaction();
 
