@@ -2,7 +2,7 @@
 require_once "../config/database.php";
 require_once "../includes/auth.php";
 
-if (!isLoggedIn() || !isAdmin()) {
+if (!isLoggedIn() || !(isAdmin() || isLecturer())) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit();

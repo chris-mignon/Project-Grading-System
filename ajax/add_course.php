@@ -2,7 +2,7 @@
 require_once "../config/database.php";
 require_once "../includes/auth.php";
 
-if (!isLoggedIn() || !isAdmin()) {
+if (!isLoggedIn() || !(isAdmin() || isLecturer())) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit();
@@ -11,6 +11,11 @@ if (!isLoggedIn() || !isAdmin()) {
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+    exit();
+}
+
+if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+    echo json_encode(['success' => false, 'message' => 'Invalid CSRF token']);
     exit();
 }
 

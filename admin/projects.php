@@ -1,6 +1,6 @@
 <?php
 require_once "../includes/auth.php";
-redirectIfNotAdmin();
+redirectIfNotAdminOrLecturer();
 
 require_once "../config/database.php";
 $database = new Database();
@@ -11,19 +11,51 @@ $course_id = $_GET['course_id'] ?? null;
 
 // Handle form submission
 if ($_POST && isset($_POST['project_name'])) {
-    $project_name = $_POST['project_name'];
-    $description = $_POST['description'];
-    $student_name = $_POST['student_name'];
-    $student_id = $_POST['student_id'];
-    $course_id = $_POST['course_id'];
-    
-    $query = "INSERT INTO projects (project_name, description, student_name, student_id, course_id) 
-              VALUES (?, ?, ?, ?, ?)";
-    $stmt = $db->prepare($query);
-    $stmt->execute([$project_name, $description, $student_name, $student_id, $course_id]);
-    
-    header("Location: projects.php?success=1&course_id=" . $course_id);
-    exit();
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        header("Location: projects.php?success=0");
+        exit();
+    }
+
+    $project_name = trim($_POST['project_name'] ?? '');
+    $description = trim($_POST['description'] ?? '');
+    $student_name = trim($_POST['student_name'] ?? '');
+    $student_id = trim($_POST['student_id'] ?? '');
+    $course_id = (int)($_POST['course_id'] ?? 0);
+    $assigned_to_all = isset($_POST['assigned_to_all']) ? 1 : 0;
+    $lecturers = $_POST['lecturers'] ?? [];
+
+    if ($project_name === '' || $student_name === '' || $student_id === '' || !$course_id) {
+        header("Location: projects.php?success=0&course_id=" . $course_id);
+        exit();
+    }
+
+    try {
+        $db->beginTransaction();
+        $query = "INSERT INTO projects (project_name, description, student_name, student_id, course_id, assigned_to_all) 
+                  VALUES (?, ?, ?, ?, ?, ?)";
+        $stmt = $db->prepare($query);
+        $stmt->execute([$project_name, $description, $student_name, $student_id, $course_id, $assigned_to_all]);
+        $project_id = $db->lastInsertId();
+
+        // Assign lecturers if not assigned to all
+        if ((int)$assigned_to_all === 0 && !empty($lecturers)) {
+            $assignStmt = $db->prepare("INSERT INTO project_assignments (project_id, lecturer_id) VALUES (?, ?)");
+            foreach ($lecturers as $lecturer_id) {
+                $lecturer_id = (int)$lecturer_id;
+                if ($lecturer_id > 0) {
+                    $assignStmt->execute([$project_id, $lecturer_id]);
+                }
+            }
+        }
+
+        $db->commit();
+        header("Location: projects.php?success=1&course_id=" . $course_id);
+        exit();
+    } catch (PDOException $e) {
+        if ($db->inTransaction()) $db->rollBack();
+        header("Location: projects.php?success=0&course_id=" . $course_id);
+        exit();
+    }
 }
 
 // Fetch courses for dropdown
@@ -39,9 +71,9 @@ $lecturers = $lecturers_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Fetch projects
 $projects_query = "SELECT p.*, c.course_name, c.course_code,
-                  CASE WHEN p.assigned_to_all = 1 THEN 'All Lecturers'
-                       ELSE GROUP_CONCAT(u.name SEPARATOR ', ')
-                  END AS assigned_lecturers,
+                   CASE WHEN p.assigned_to_all = 1 THEN 'All Lecturers'
+                        ELSE GROUP_CONCAT(u.username SEPARATOR ', ')
+                   END AS assigned_lecturers,
                   COUNT(DISTINCT pa.lecturer_id) AS total_assigned,
                   COUNT(DISTINCT e.lecturer_id) AS completed
                   FROM projects p 

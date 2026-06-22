@@ -1,6 +1,6 @@
 <?php
 require_once "../includes/auth.php";
-redirectIfNotAdmin();
+redirectIfNotAdminOrLecturer();
 
 require_once "../config/database.php";
 $database = new Database();
@@ -8,12 +8,15 @@ $db = $database->getConnection();
 
 // Handle form submission
 if ($_POST && isset($_POST['course_name'])) {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $errors = ['Invalid CSRF token'];
+    }
     $course_name = trim($_POST['course_name']);
     $course_code = trim($_POST['course_code']);
     $description = trim($_POST['description']);
     
     // Validate input
-    $errors = [];
+    if (!isset($errors)) $errors = [];
     
     if (empty($course_name)) {
         $errors[] = "Course name is required";
@@ -168,6 +171,7 @@ $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
                 <form method="POST" id="addCourseForm">
                     <div class="modal-body">
+                        <input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
                         <div class="mb-3">
                             <label for="course_code" class="form-label">Course Code *</label>
                             <input type="text" class="form-control" id="course_code" name="course_code" 

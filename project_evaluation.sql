@@ -74,10 +74,25 @@ CREATE TABLE `projects` (
   `id` int(11) NOT NULL,
   `project_name` varchar(100) NOT NULL,
   `description` text DEFAULT NULL,
+  `assigned_to_all` tinyint(1) NOT NULL DEFAULT 0,
   `course_id` int(11) DEFAULT NULL,
   `student_name` varchar(100) NOT NULL,
   `student_id` varchar(20) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `project_assignments`
+--
+
+CREATE TABLE `project_assignments` (
+  `id` int(11) NOT NULL,
+  `project_id` int(11) NOT NULL,
+  `lecturer_id` int(11) NOT NULL,
+  `assigned_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -195,6 +210,11 @@ ALTER TABLE `evaluation_scores`
 ALTER TABLE `projects`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
+-- AUTO_INCREMENT for table `project_assignments`
+--
+ALTER TABLE `project_assignments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
 --
 -- AUTO_INCREMENT for table `rubric_criteria`
 --
@@ -236,6 +256,27 @@ ALTER TABLE `evaluation_scores`
 --
 ALTER TABLE `projects`
   ADD CONSTRAINT `projects_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`);
+
+--
+-- Constraints for table `project_assignments`
+--
+ALTER TABLE `project_assignments`
+  ADD CONSTRAINT `project_assignments_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`),
+  ADD CONSTRAINT `project_assignments_ibfk_2` FOREIGN KEY (`lecturer_id`) REFERENCES `users` (`id`);
+
+--
+-- Indexes for table `project_assignments`
+--
+ALTER TABLE `project_assignments`
+  ADD UNIQUE KEY `uq_project_lecturer` (`project_id`,`lecturer_id`),
+  ADD KEY `project_assignments_project_id` (`project_id`),
+  ADD KEY `project_assignments_lecturer_id` (`lecturer_id`);
+
+--
+-- Prevent duplicate evaluations (same lecturer on same project)
+--
+ALTER TABLE `evaluations`
+  ADD UNIQUE KEY `uq_evaluations_project_lecturer` (`project_id`,`lecturer_id`);
 
 --
 -- Constraints for table `rubric_criteria`

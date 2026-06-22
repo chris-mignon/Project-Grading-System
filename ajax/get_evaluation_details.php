@@ -35,6 +35,16 @@ if (!$project) {
     exit('Project not found');
 }
 
+// Authorization: lecturer can only access details for assigned projects
+if (isLecturer() && (int)($project['assigned_to_all'] ?? 0) === 0) {
+    $authStmt = $db->prepare("SELECT 1 FROM project_assignments WHERE project_id = ? AND lecturer_id = ? LIMIT 1");
+    $authStmt->execute([$project_id, $lecturer_id]);
+    if ($authStmt->rowCount() === 0) {
+        http_response_code(403);
+        exit('Unauthorized');
+    }
+}
+
 // Get current user's evaluation
 $query = "SELECT e.* FROM evaluations e 
           WHERE e.project_id = ? AND e.lecturer_id = ?";
