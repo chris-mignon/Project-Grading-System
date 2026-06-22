@@ -499,6 +499,7 @@ foreach ($projects as $project) {
                 url: '../ajax/save_evaluation.php',
                 method: 'POST',
                 data: {
+                    csrf_token: $('#evaluation-form input[name="csrf_token"]').val(),
                     project_id: projectId,
                     feedback: feedback,
                     scores: scores
