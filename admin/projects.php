@@ -382,11 +382,18 @@ $projects = $projects_stmt->fetchAll(PDO::FETCH_ASSOC);
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
-    // init select2
+    // init select2 (ensure dropdown renders inside modals)
     $(document).ready(function() {
-        $('#lecturers_select, #edit-lecturers').select2({
+        $('#lecturers_select').select2({
             placeholder: 'Select lecturers',
-            width: '100%'
+            width: '100%',
+            dropdownParent: $('#addProjectModal')
+        });
+
+        $('#edit-lecturers').select2({
+            placeholder: 'Select lecturers',
+            width: '100%',
+            dropdownParent: $('#editModal')
         });
     });
     // populate edit modal
@@ -442,13 +449,15 @@ $projects = $projects_stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // toggle disable in edit modal
     document.getElementById('edit-assign-all').addEventListener('change', function() {
-        document.getElementById('edit-lecturers').disabled = this.checked;
+        const sel = $('#edit-lecturers');
+        sel.prop('disabled', this.checked).trigger('change');
     });
     </script>
     <script>
     // Disable lecturer select if assign all is checked
     document.getElementById('assign_all').addEventListener('change', function() {
-        document.getElementById('lecturers_select').disabled = this.checked;
+        const sel = $('#lecturers_select');
+        sel.prop('disabled', this.checked).trigger('change');
     });
     </script>
 </body>
