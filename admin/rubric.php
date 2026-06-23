@@ -39,37 +39,39 @@ if ($_POST && isset($_POST['criterion_name'])) {
     exit();
 }
 
-// Handle delete request
-if (isset($_GET['delete_id'])) {
-    $delete_id = $_GET['delete_id'];
-
-    // Authorization: lecturer can only delete rubric for their courses
-    if (isLecturer() && !isAdmin()) {
-        $auth = $db->prepare(
-            "SELECT rc.course_id
-             FROM rubric_criteria rc
-             JOIN courses c ON c.id = rc.course_id
-             WHERE rc.id = ?"
-        );
-        // get created_by from joined course
-        $auth2 = $db->prepare(
-            "SELECT c.created_by
-             FROM rubric_criteria rc
-             JOIN courses c ON c.id = rc.course_id
-             WHERE rc.id = ?"
-        );
-        $auth2->execute([(int)$delete_id]);
-        $row = $auth2->fetch(PDO::FETCH_ASSOC);
-        if (!$row || (int)$row['created_by'] !== (int)$_SESSION['user_id']) {
-            header("Location: rubric.php?success=0&course_id=" . ($course_id ?? ''));
-            exit();
-        }
+// Handle delete request (POST + CSRF)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $cid = (int)($_POST['course_id'] ?? ($course_id ?? 0));
+        header("Location: rubric.php?success=0&course_id=" . $cid);
+        exit();
     }
 
-    $query = "DELETE FROM rubric_criteria WHERE id = ?";
-    $stmt = $db->prepare($query);
-    $stmt->execute([(int)$delete_id]);
-    
+    $delete_id = (int)($_POST['delete_id'] ?? 0);
+    $course_id = (int)($_POST['course_id'] ?? ($course_id ?? 0));
+
+    if ($delete_id > 0) {
+        // Authorization: lecturer can only delete rubric for their courses
+        if (isLecturer() && !isAdmin()) {
+            $auth2 = $db->prepare(
+                "SELECT c.created_by
+                 FROM rubric_criteria rc
+                 JOIN courses c ON c.id = rc.course_id
+                 WHERE rc.id = ?"
+            );
+            $auth2->execute([$delete_id]);
+            $row = $auth2->fetch(PDO::FETCH_ASSOC);
+            if (!$row || (int)$row['created_by'] !== (int)$_SESSION['user_id']) {
+                header("Location: rubric.php?success=0&course_id=" . $course_id);
+                exit();
+            }
+        }
+
+        $query = "DELETE FROM rubric_criteria WHERE id = ?";
+        $stmt = $db->prepare($query);
+        $stmt->execute([$delete_id]);
+    }
+
     header("Location: rubric.php?success=2&course_id=" . $course_id);
     exit();
 }
@@ -203,13 +205,16 @@ if ($course_id) {
                                                 <td><?php echo htmlspecialchars($criterion['criterion_name']); ?></td>
                                                 <td><?php echo $criterion['max_score']; ?></td>
                                                 <td><?php echo htmlspecialchars($criterion['course_code']); ?></td>
-                                                <td>
-                                                    <a href="rubric.php?delete_id=<?php echo $criterion['id']; ?>&course_id=<?php echo $course_id; ?>" 
-                                                       class="btn btn-sm btn-outline-danger"
-                                                       onclick="return confirm('Are you sure you want to delete this criterion?')">
-                                                        <i class="bi bi-trash"></i> Delete
-                                                    </a>
-                                                </td>
+                                                 <td>
+                                                     <form method="POST" action="rubric.php?course_id=<?php echo (int)$criterion['course_id']; ?>" style="display:inline">
+                                                         <input type="hidden" name="delete_id" value="<?php echo (int)$criterion['id']; ?>">
+                                                         <input type="hidden" name="course_id" value="<?php echo (int)$criterion['course_id']; ?>">
+                                                         <input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
+                                                         <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this criterion?')">
+                                                             <i class="bi bi-trash"></i> Delete
+                                                         </button>
+                                                     </form>
+                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>

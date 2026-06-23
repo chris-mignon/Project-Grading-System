@@ -8,6 +8,10 @@ $db = $database->getConnection();
 
 // Handle form submission for adding new user
 if ($_POST && isset($_POST['username'])) {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        header("Location: users.php?success=0");
+        exit();
+    }
     $username = $_POST['username'];
     $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
     $role = $_POST['role'];
@@ -25,27 +29,39 @@ if ($_POST && isset($_POST['username'])) {
 }
 
 // Handle status toggle
-if (isset($_GET['toggle_status'])) {
-    $user_id = $_GET['toggle_status'];
-    $query = "UPDATE users SET status = IF(status='active', 'inactive', 'active') WHERE id = ? AND id != ?";
-    $stmt = $db->prepare($query);
-    $stmt->execute([$user_id, $_SESSION['user_id']]);
-    
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_status'])) {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        header("Location: users.php?success=0");
+        exit();
+    }
+
+    $user_id = (int)($_POST['toggle_status'] ?? 0);
+    if ($user_id > 0) {
+        $query = "UPDATE users SET status = IF(status='active', 'inactive', 'active') WHERE id = ? AND id != ?";
+        $stmt = $db->prepare($query);
+        $stmt->execute([$user_id, $_SESSION['user_id']]);
+    }
+
     header("Location: users.php?success=2");
     exit();
 }
 
 // Handle delete user
-if (isset($_GET['delete_id'])) {
-    $delete_id = $_GET['delete_id'];
-    
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        header("Location: users.php?success=0");
+        exit();
+    }
+
+    $delete_id = (int)($_POST['delete_id'] ?? 0);
+
     // Prevent deleting current user
-    if ($delete_id != $_SESSION['user_id']) {
+    if ($delete_id > 0 && $delete_id !== (int)$_SESSION['user_id']) {
         $query = "DELETE FROM users WHERE id = ?";
         $stmt = $db->prepare($query);
         $stmt->execute([$delete_id]);
     }
-    
+
     header("Location: users.php?success=3");
     exit();
 }
