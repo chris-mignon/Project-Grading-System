@@ -66,6 +66,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
     exit();
 }
 
+// Handle status toggle (GET + CSRF token in query)
+if (isset($_GET['toggle_status'])) {
+    if (!verifyCsrfToken($_GET['csrf_token'] ?? '')) {
+        header("Location: users.php?success=0");
+        exit();
+    }
+
+    $user_id = (int)($_GET['toggle_status'] ?? 0);
+    if ($user_id > 0) {
+        $query = "UPDATE users SET status = IF(status='active', 'inactive', 'active') WHERE id = ? AND id != ?";
+        $stmt = $db->prepare($query);
+        $stmt->execute([$user_id, $_SESSION['user_id']]);
+    }
+
+    header("Location: users.php?success=2");
+    exit();
+}
+
+// Handle delete user (GET + CSRF token in query)
+if (isset($_GET['delete_id'])) {
+    if (!verifyCsrfToken($_GET['csrf_token'] ?? '')) {
+        header("Location: users.php?success=0");
+        exit();
+    }
+
+    $delete_id = (int)($_GET['delete_id'] ?? 0);
+    if ($delete_id > 0 && $delete_id !== (int)$_SESSION['user_id']) {
+        $query = "DELETE FROM users WHERE id = ?";
+        $stmt = $db->prepare($query);
+        $stmt->execute([$delete_id]);
+    }
+
+    header("Location: users.php?success=3");
+    exit();
+}
+
 // Fetch all users
 $query = "SELECT id, username, role, full_name, email, status, created_at 
           FROM users 
@@ -199,12 +235,12 @@ foreach ($users as $user) {
                                                 <td><?php echo date('M j, Y', strtotime($user['created_at'])); ?></td>
                                                 <td>
                                                     <?php if ($user['id'] != $_SESSION['user_id']): ?>
-                                                        <a href="users.php?toggle_status=<?php echo $user['id']; ?>" 
+                                                        <a href="users.php?toggle_status=<?php echo $user['id']; ?>&csrf_token=<?php echo getCsrfToken(); ?>" 
                                                            class="btn btn-sm btn-<?php echo $user['status'] === 'active' ? 'warning' : 'success'; ?>">
                                                             <i class="bi bi-<?php echo $user['status'] === 'active' ? 'pause' : 'play'; ?>"></i>
                                                             <?php echo $user['status'] === 'active' ? 'Deactivate' : 'Activate'; ?>
                                                         </a>
-                                                        <a href="users.php?delete_id=<?php echo $user['id']; ?>" 
+                                                        <a href="users.php?delete_id=<?php echo $user['id']; ?>&csrf_token=<?php echo getCsrfToken(); ?>" 
                                                            class="btn btn-sm btn-outline-danger"
                                                            onclick="return confirm('Are you sure you want to delete this user? This action cannot be undone.')">
                                                             <i class="bi bi-trash"></i> Delete
@@ -240,6 +276,7 @@ foreach ($users as $user) {
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form method="POST">
+                    <input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
                     <div class="modal-body">
                         <div class="mb-3">
                             <label for="username" class="form-label">Username</label>
