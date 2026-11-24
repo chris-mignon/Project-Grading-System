@@ -4,9 +4,11 @@ FROM php:8.2-apache
 # Install mysqli and PDO MySQL extensions
 RUN docker-php-ext-install mysqli pdo pdo_mysql && docker-php-ext-enable mysqli pdo_mysql
 
+# Use PHP's production settings (hides errors from visitors)
+RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+
 # Copy application files to the web server root
 COPY . /var/www/html/
-
 
 # Set working directory
 WORKDIR /var/www/html
